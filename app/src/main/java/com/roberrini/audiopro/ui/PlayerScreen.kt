@@ -70,6 +70,7 @@ import kotlin.math.roundToInt
 fun PlayerScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Composable () -> Unit) {
     val online = state.connection == Connection.Online
     var renaming by remember { mutableStateOf<Int?>(null) }
+    var choosing by remember { mutableStateOf<Int?>(null) }
 
     Scaffold(
         snackbarHost = snackbarHost,
@@ -115,10 +116,26 @@ fun PlayerScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Composable
                 stored = state.speakerPresets,
                 enabled = online,
                 onPlay = vm::playPreset,
-                onRename = { renaming = it },
+                onChoose = { choosing = it },
             )
             Spacer(Modifier.height(12.dp))
         }
+    }
+
+    choosing?.let { n ->
+        StationPickerDialog(
+            number = n,
+            state = state,
+            onPick = {
+                vm.assignPreset(n, it)
+                choosing = null
+            },
+            onRename = {
+                renaming = n
+                choosing = null
+            },
+            onDismiss = { choosing = null },
+        )
     }
 
     renaming?.let { n ->
@@ -313,12 +330,12 @@ private fun Presets(
     stored: List<SpeakerPreset>,
     enabled: Boolean,
     onPlay: (Int) -> Unit,
-    onRename: (Int) -> Unit,
+    onChoose: (Int) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Presets")
         Text(
-            "Stored on the speaker: tap to play, same as its buttons. Long‑press to rename here.",
+            "Stored on the speaker: tap to play, same as its buttons. Long‑press to change one.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -336,7 +353,7 @@ private fun Presets(
                             .combinedClickable(
                                 enabled = enabled,
                                 onClick = { onPlay(n) },
-                                onLongClick = { onRename(n) },
+                                onLongClick = { onChoose(n) },
                             ),
                     ) {
                         Column(

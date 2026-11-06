@@ -477,6 +477,19 @@ class SpeakerViewModel(app: Application) : AndroidViewModel(app) {
         c.playUrl(station.url)
     }
 
+    /** Stores a station on a preset button, so the speaker plays it without the app. */
+    fun assignPreset(n: Int, station: Station) {
+        val name = Stations.presetName(station)
+        action("Saving to button $n", toast = "Saved $name to button $n") { c ->
+            val dev = upnpDevice(c.host) ?: throw IOException("UPnP not available")
+            Upnp.savePreset(dev, n, name, station.url, station.imageUrl)
+            store.setPresetName(n, null)
+            val presets = Upnp.getPresets(dev)
+            _state.update { it.copy(speakerPresets = presets, presetNames = loadPresetNames()) }
+            log("Saved $name to button $n")
+        }
+    }
+
     fun saveStation(original: Station?, name: String, url: String, image: String, icon: String, color: Long) {
         val station = Station(
             id = original?.id ?: (Station.CUSTOM_PREFIX + UUID.randomUUID()),

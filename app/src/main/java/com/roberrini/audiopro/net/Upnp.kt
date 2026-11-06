@@ -74,6 +74,7 @@ object Upnp {
     private const val SSDP_PORT = 1900
     private const val RC = "urn:schemas-upnp-org:service:RenderingControl:1"
     private const val AVT = "urn:schemas-upnp-org:service:AVTransport:1"
+    private const val RADIO_SOURCE = "Linkplay Radio"
     private const val PLAY_QUEUE = "urn:schemas-wiimu-com:service:PlayQueue:1"
     private val KEY_BLOCK = Regex("<Key(\\d+)>(.*?)</Key\\1>", RegexOption.DOT_MATCHES_ALL)
     private val NO_VALUE = setOf("unknown", "unknow", "un_known")
@@ -268,6 +269,42 @@ object Upnp {
         }
         return broken.size
     }
+
+    /**
+     * Stores a stream on a preset button: rewrites the speaker's key list, then swaps the button's
+     * queue. The old queue has to go, or two queues would claim the same button.
+     */
+    suspend fun savePreset(dev: UpnpDevice, number: Int, name: String, url: String, pictureUrl: String?) {
+        val control = dev.playQueueUrl ?: throw IOException("No PlayQueue service")
+        val previous = getPresets(dev).firstOrNull { it.number == number }
+        val body = soap(control, PLAY_QUEUE, "GetKeyMapping", "")
+        val list = tagValue(body, "QueueContext")?.let(::unescapeXml).orEmpty()
+        // The suffix keeps queue names unique if one station is on two buttons. The speaker's own
+        // entries use the same form, and getPresets hides it.
+        val keyName = "${name}_#~${System.currentTimeMillis() / 1000}"
+        val picture = pictureUrl?.takeIf { it.startsWith("http") }.orEmpty()
+        val key = "<Key$number>\n<Name>${escapeXml(keyName)}</Name>\n<Url>${escapeXml(url)}</Url>\n" +
+            "<Metadata>${escapeXml(presetMetadata(name, url, picture))}</Metadata>\n" +
+            "<Source>$RADIO_SOURCE</Source>\n<PicUrl>${escapeXml(picture)}</PicUrl>\n</Key$number>"
+        val pattern = Regex("<Key$number>.*?</Key$number>|<Key$number/>", RegexOption.DOT_MATCHES_ALL)
+        if (!pattern.containsMatchIn(list)) throw IOException("The speaker has no preset $number")
+        val updated = pattern.replaceFirst(list, Regex.escapeReplacement(key))
+        soap(control, PLAY_QUEUE, "SetKeyMapping", "<QueueContext>${escapeXml(updated)}</QueueContext>")
+        previous?.let { removeQueue(control, it) }
+        val saved = getPresets(dev).firstOrNull { it.number == number }
+            ?: throw IOException("Preset $number was not saved")
+        addQueue(control, saved)
+    }
+
+    private fun presetMetadata(title: String, url: String, picture: String) =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
+            "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" xmlns:song=\"www.linkplay.com/song/\" " +
+            "xmlns:custom=\"www.linkplay.com/custom/\" xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">" +
+            "<upnp:class>object.item.audioItem.musicTrack</upnp:class><item>" +
+            "<res protocolInfo=\"http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;\" duration=\"\">" +
+            "${escapeXml(url)}</res><song:id>0</song:id><dc:title>${escapeXml(title)}</dc:title>" +
+            "<upnp:artist></upnp:artist><upnp:album></upnp:album>" +
+            "<upnp:albumArtURI>${escapeXml(picture)}</upnp:albumArtURI></item></DIDL-Lite>"
 
     /** Plays a preset the way its physical button does, so the speaker lights that button. */
     suspend fun playPreset(dev: UpnpDevice, preset: SpeakerPreset) {

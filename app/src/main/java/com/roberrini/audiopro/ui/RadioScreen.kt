@@ -17,9 +17,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -97,6 +100,7 @@ private data class Editing(val original: Station?)
 @Composable
 fun RadioScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Composable () -> Unit) {
     var editing by remember { mutableStateOf<Editing?>(null) }
+    var assigning by remember { mutableStateOf<Station?>(null) }
     val online = state.connection == Connection.Online
 
     Scaffold(
@@ -120,13 +124,13 @@ fun RadioScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Composable 
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            fun group(title: String, list: List<Station>) = section(title, list, state, online, vm) {}
+            fun group(title: String, list: List<Station>) = section(title, list, state, online, vm) { assigning = it }
             group("NTS", Stations.ntsLive)
             group("NTS Infinite Mixtapes", state.mixtapes)
             group("BBC Radio", Stations.bbc)
             group("NPR", Stations.npr)
             group("Independent radio", Stations.indie)
-            section("My stations", state.customStations, state, online, vm) { editing = Editing(it) }
+            section("My stations", state.customStations, state, online, vm) { assigning = it }
             item(key = "add") {
                 Box(
                     Modifier
@@ -145,6 +149,22 @@ fun RadioScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Composable 
         }
     }
 
+    assigning?.let { s ->
+        ButtonPickerDialog(
+            station = s,
+            state = state,
+            onPick = { n ->
+                vm.assignPreset(n, s)
+                assigning = null
+            },
+            onEdit = {
+                editing = Editing(s)
+                assigning = null
+            },
+            onDismiss = { assigning = null },
+        )
+    }
+
     editing?.let { e ->
         StationDialog(
             original = e.original,
@@ -160,7 +180,7 @@ private fun LazyGridScope.section(
     state: UiState,
     online: Boolean,
     vm: SpeakerViewModel,
-    onEdit: (Station) -> Unit,
+    onLongClick: (Station) -> Unit,
 ) {
     item(key = "h-$title", span = { GridItemSpan(maxLineSpan) }) {
         Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp))
@@ -171,7 +191,7 @@ private fun LazyGridScope.section(
             selected = state.current?.id == s.id,
             enabled = online,
             onClick = { vm.playStation(s) },
-            onLongClick = { if (s.isCustom) onEdit(s) },
+            onLongClick = { onLongClick(s) },
             onImageError = vm::logMessage,
         )
     }
@@ -245,6 +265,99 @@ private fun StationTile(
             )
         }
     }
+}
+
+/** Long-press on a station: choose which button on the speaker gets it. */
+@Composable
+private fun ButtonPickerDialog(
+    station: Station,
+    state: UiState,
+    onPick: (Int) -> Unit,
+    onEdit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Save ${station.name} to a button") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    "Replaces what's on that button.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Muted,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
+                (1..(state.device?.presetCount?.coerceAtMost(10) ?: 6)).forEach { n ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onPick(n) }.padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "$n",
+                            color = Amber,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(end = 14.dp),
+                        )
+                        Text(
+                            state.presetNames[n] ?: state.speakerPresets.firstOrNull { it.number == n }?.name ?: "Empty",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            if (station.isCustom) TextButton(onClick = onEdit) { Text("Edit station") }
+        },
+    )
+}
+
+/** Long-press on a preset: choose which station goes on that button. */
+@Composable
+fun StationPickerDialog(
+    number: Int,
+    state: UiState,
+    onPick: (Station) -> Unit,
+    onRename: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val groups = listOf(
+        "NTS" to Stations.ntsLive,
+        "NTS Infinite Mixtapes" to state.mixtapes,
+        "BBC Radio" to Stations.bbc,
+        "NPR" to Stations.npr,
+        "Independent radio" to Stations.indie,
+        "My stations" to state.customStations,
+    ).filter { it.second.isNotEmpty() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose a station for button $number") },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                groups.forEach { (title, stations) ->
+                    item(key = "h-$title") {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Muted,
+                            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                        )
+                    }
+                    lazyItems(stations, key = { it.id }) { s ->
+                        Text(
+                            s.name,
+                            modifier = Modifier.fillMaxWidth().clickable { onPick(s) }.padding(vertical = 10.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onRename) { Text("Rename") } },
+    )
 }
 
 @Composable

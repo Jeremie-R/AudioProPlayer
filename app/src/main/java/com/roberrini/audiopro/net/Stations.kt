@@ -98,6 +98,13 @@ object Stations {
         Station("paradise", "Radio Paradise", "https://stream.radioparadise.com/mp3-192", "California", 0xFF3F6C9B, imageUrl = tunein("s13606")),
     )
 
+    /** The name to store on the speaker, where a tile's section heading no longer gives context. */
+    fun presetName(station: Station): String = when {
+        station.id.startsWith("bbc") -> "BBC ${station.name}"
+        station.id.startsWith("nts-") -> "NTS ${station.name}"
+        else -> station.name
+    }
+
     /** Finds the catalogue entry for a URL, ignoring query strings like `?client=direct`. */
     fun match(url: String, mixtapes: List<Station>): Station? {
         val key = url.substringBefore('?')

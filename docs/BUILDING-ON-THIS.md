@@ -58,7 +58,7 @@ Other ideas for an always‑on service:
 
 ## Saving presets
 
-`SetKeyMapping` works, so any client could offer "save this station to button 3". Remember the order: write the key, then add a matching queue. The format that worked is in the [protocol notes](PROTOCOL.md).
+`SetKeyMapping` works, and the Android app uses it (`savePreset` in `net/Upnp.kt`). Remember the order: write the key, delete the button's old queue, then add a matching one. Leaving the old queue behind means two queues claim the same button. The format that worked is in the [protocol notes](PROTOCOL.md).
 
 ## Sharing what you find
 

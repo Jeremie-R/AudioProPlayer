@@ -39,7 +39,8 @@ If it isn't listed, type its IP address. Your router's app shows it. Giving the 
   - All 16 NTS Infinite Mixtapes
   - BBC Radio 1, 2, 3, 4, 5 Live and 6 Music
   - NPR, KEXP, FIP, WFMU, dublab and Radio Paradise
-- **Your own stations:** paste a stream URL and a name, then add an image or pick an icon and colour. Long‑press one to edit or delete it.
+- **Your own stations:** paste a stream URL and a name, then add an image or pick an icon and colour.
+- **Save any station to a preset button.** Long‑press a station and pick a button, or long‑press a preset and pick a station. The speaker stores it, so the physical button plays it without the app.
 
 The speaker fetches the stream itself, so music keeps playing when your phone sleeps or leaves the house.
 
@@ -55,7 +56,6 @@ The app repairs radio presets only. Spotify or TIDAL presets are left alone and 
 
 ## Limits
 
-- It can't save stations to presets yet. Use the Audio Pro app to set them. The speaker does support saving, as described in the [protocol notes](docs/PROTOCOL.md).
 - It's a remote and a radio. It doesn't play MP3s from your phone. Spotify Connect, Google Cast and AirPlay keep working as before, outside this app.
 - Reconnecting was tested with short outages and power cycles, not over weeks of use. It can't fix a weak Wi‑Fi signal or a router problem.
 - Switching source away from a stream and back stops the stream. Press Play to restart it.
