@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- This key is not a secret: every LinkPlay app shares it and open-source projects publish it.
+         The speaker requires it for mutual TLS on port 4443. See net/LinkPlayTls.kt. -->
+    <issue id="PackagedPrivateKey">
+        <ignore path="src/main/res/raw/linkplay_client.pem" />
+    </issue>
+</lint>

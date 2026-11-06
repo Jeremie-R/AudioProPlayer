@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The speaker lives on the home network and some firmware only answers plain HTTP
+  (port 80) or UPnP (port 49152). Cleartext is allowed so those fallbacks work.
+  The app never talks to anything except the speaker on your local network.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
