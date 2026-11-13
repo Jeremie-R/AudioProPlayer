@@ -63,6 +63,7 @@ fun DiagnosticsScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Compo
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            item { ProblemRail(state, vm) }
             item {
                 InfoCard(
                     listOf(
@@ -75,6 +76,7 @@ fun DiagnosticsScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Compo
                         "UUID" to (d?.uuid ?: "—"),
                         "Wi‑Fi" to listOfNotNull(d?.ssid, d?.rssi?.let { "$it dBm" }).joinToString("  ").ifEmpty { "—" },
                         "Presets" to (d?.presetCount?.toString() ?: "—"),
+                        "Phone network" to (state.network?.describe() ?: "—"),
                     ),
                 )
             }

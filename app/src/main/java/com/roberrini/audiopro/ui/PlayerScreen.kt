@@ -106,6 +106,7 @@ fun PlayerScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Composable
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
+            ProblemRail(state, vm)
             NowPlaying(state)
             Transport(state, enabled = online, onPrev = vm::previous, onPlayPause = vm::playPause, onNext = vm::next)
             Volume(state, enabled = online, onVolume = vm::setVolume, onMute = vm::toggleMute)

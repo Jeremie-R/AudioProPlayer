@@ -63,6 +63,8 @@ The app repairs radio presets only. Spotify or TIDAL presets are left alone and 
 
 ## If something doesn't work
 
+If the app can't reach the speaker, a red banner at the top says why: your phone is on mobile data, a VPN is in the way, or the speaker isn't answering. It has a button to the setting that fixes it. The most common cause is the phone quietly using mobile data instead of your Wi‑Fi.
+
 Open **Diagnostics** (the bug icon), tap **Test connection**, then **Copy report**, and paste it into an [issue](https://github.com/Jeremie-R/AudioProPlayer/issues). The report shows which connections worked and what your speaker replied. **It includes your Wi‑Fi name and the speaker's IP and MAC address, so remove those before posting.**
 
 | Diagnostics shows | Likely meaning |

@@ -82,6 +82,7 @@ fun SetupScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Composable 
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            item { ProblemRail(state, vm) }
             item {
                 Text(
                     if (state.discovering) "Searching your Wi‑Fi for Audio Pro / LinkPlay speakers…"

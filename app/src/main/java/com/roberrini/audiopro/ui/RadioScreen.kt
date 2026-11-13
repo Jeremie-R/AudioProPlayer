@@ -124,6 +124,7 @@ fun RadioScreen(state: UiState, vm: SpeakerViewModel, snackbarHost: @Composable 
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            item(key = "problem", span = { GridItemSpan(maxLineSpan) }) { ProblemRail(state, vm) }
             fun group(title: String, list: List<Station>) = section(title, list, state, online, vm) { assigning = it }
             group("NTS", Stations.ntsLive)
             group("NTS Infinite Mixtapes", state.mixtapes)

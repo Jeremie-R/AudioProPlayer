@@ -8,6 +8,9 @@ import com.roberrini.audiopro.net.DeviceInfo
 import com.roberrini.audiopro.net.Discovery
 import com.roberrini.audiopro.net.FoundSpeaker
 import com.roberrini.audiopro.net.LiveShow
+import com.roberrini.audiopro.net.NetworkInfo
+import com.roberrini.audiopro.net.NetworkMonitor
+import com.roberrini.audiopro.net.PhoneNetwork
 import com.roberrini.audiopro.net.NtsApi
 import com.roberrini.audiopro.net.PlayState
 import com.roberrini.audiopro.net.PlayerStatus
@@ -59,6 +62,7 @@ data class UiState(
     val customStations: List<Station> = emptyList(),
     val current: Station? = null,
     val liveShows: Map<String, LiveShow> = emptyMap(),
+    val network: NetworkInfo? = null,
     val endpointTests: List<String> = emptyList(),
     val testing: Boolean = false,
     val log: List<String> = emptyList(),
@@ -71,6 +75,7 @@ class SpeakerViewModel(app: Application) : AndroidViewModel(app) {
     private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
     private val store = SpeakerStore(app)
     private val discovery = Discovery(app, ::log)
+    private val networkMonitor = NetworkMonitor(app, ::onNetworkChanged)
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
 
@@ -108,6 +113,31 @@ class SpeakerViewModel(app: Application) : AndroidViewModel(app) {
             client = SpeakerClient(app, saved.host, saved.endpoint, ::log)
         } else {
             startDiscovery()
+        }
+    }
+
+    init {
+        networkMonitor.start()
+    }
+
+    override fun onCleared() {
+        networkMonitor.stop()
+    }
+
+    /** Back on Wi‑Fi: retry now instead of waiting out the reconnect back-off. */
+    private fun onNetworkChanged(info: NetworkInfo) {
+        val before = _state.value.network
+        _state.update { it.copy(network = info) }
+        if (before?.kind == info.kind && before.addresses == info.addresses) return
+        log("Phone network: ${info.describe()}")
+        if (before != null && info.kind == PhoneNetwork.WIFI && before.kind != PhoneNetwork.WIFI) {
+            viewModelScope.launch {
+                if (client != null && foreground) {
+                    stopPolling()
+                    startPolling()
+                }
+                if (_state.value.screen == Screen.SETUP) startDiscovery()
+            }
         }
     }
 
@@ -576,6 +606,7 @@ class SpeakerViewModel(app: Application) : AndroidViewModel(app) {
         return buildString {
             appendLine("Audio Pro Player diagnostics — ${Date()}")
             appendLine("Host: ${s.saved?.host}  endpoint: ${client?.endpoint}  connection: ${s.connection}")
+            appendLine("Phone network: ${s.network?.describe() ?: "unknown"}")
             appendLine()
             appendLine("getStatusEx:")
             appendLine(s.device?.raw ?: "(none)")
